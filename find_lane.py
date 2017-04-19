@@ -4,12 +4,39 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.pyplot import savefig
 import pickle
+import glob
+from PIL import Image
+
+def region_of_interest(img, vertices):
+    """
+    Applies an image mask.
+
+    Only keeps the region of the image defined by the polygon
+    formed from `vertices`. The rest of the image is set to black.
+    """
+    #defining a blank mask to start with
+    mask = np.zeros_like(img)
+
+    #defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
+
+    #filling pixels inside the polygon defined by "vertices" with the fill color
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+
+    #returning the image only where mask pixels are nonzero
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
 
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Calculate directional gradient
     # Apply threshold
     # Apply the following steps to img
     # 1) Convert to grayscale
+    #  hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     if orient == 'x':
@@ -32,6 +59,7 @@ def mag_thresh(image, sobel_kernel=3, mag_thresh=(0, 255)):
     # Apply threshold
     # Apply the following steps to img
     # 1) Convert to grayscale
+    # hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     # 2) Take the gradient in x and y separately
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
@@ -50,7 +78,8 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
     # Calculate gradient direction
     # Apply threshold
     # Apply the following steps to img
-    # 1) Convert to grayscale
+    # 1) Convert to the S Channel of HLS color space
+    # hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     # 2) Take the gradient in x and y separately
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = sobel_kernel)
@@ -65,20 +94,49 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
     dir_binary[(dir_grad >= thresh[0]) & (dir_grad <= thresh[1])] = 1
     return dir_binary
 
-# Choose a Sobel kernel size
-ksize = 15 # Choose a larger odd number to smooth gradient measurements
+def hls_select(img, thresh=(0,255)):
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    s_channel = hls[:,:,2]
+    binary_output = np.zeros_like(s_channel)
+    binary_output[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
+    return binary_output
 
-image = mpimg.imread('signs_vehicles_xygrad.jpg')
+ksize = 7 # Choose a larger odd number to smooth gradient measurements
+kernel_size = 5
 
-# Apply each of the thresholding functions
-gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(50, 100))
-grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(50, 100))
-mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(30, 100))
-dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.7, 1.3))
+test_img = glob.glob('test_images/*')
 
-# Combine all of the thresholding functions
-combined = np.zeros_like(dir_binary)
-combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
+sample_img = cv2.imread(test_img[0])
+imshape = sample_img.shape
+vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
+                      (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
+
+for idx, fname in enumerate(test_img):
+    image = cv2.imread(fname)
+    image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+
+    # Apply each of the thresholding functions
+    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(50, 255))
+    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(50, 255))
+    mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(60, 255))
+    dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.7, 1.10))
+
+    # Combine all of the thresholding functions
+    combined = np.zeros_like(dir_binary)
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
+
+    s_channel = hls_select(image, thresh=(175,255))
+    binary_output = np.zeros_like(combined)
+    binary_output[(s_channel > 0) | (combined > 0)] = 1
+
+    region_combined = region_of_interest(binary_output, vertices)
+    # Save image
+    gray = Image.fromarray(region_combined*255)
+    write_name = 'output_images/thresholded_' + fname[12:]
+    write_name = write_name[:-3] + 'png'
+    print(write_name)
+    # cv2.imwrite(write_name,combined )
+    gray.save(write_name)
 
 # Plot the result
 f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(20, 9))
@@ -97,3 +155,4 @@ ax6.imshow(combined, cmap='gray')
 ax6.set_title('Combined Thresholded Image', fontsize=30)
 # plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 savefig('thresholded_image.png')
+

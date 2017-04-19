@@ -61,7 +61,7 @@ for idx, fname in enumerate(test_img):
     img = cv2.imread(fname)
     dst = cv2.undistort(img, mtx, dist, None, mtx)
 
-    write_name = 'test_images/undistorted_' + fname[12:]
+    write_name = 'output_images/undistorted_' + fname[12:]
     print(write_name)
     cv2.imwrite(write_name,dst)
 
