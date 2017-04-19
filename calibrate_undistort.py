@@ -34,11 +34,11 @@ for idx, fname in enumerate(cal_images):
         # write_name = 'corners_found'+str(idx)+'.jpg'
         # cv2.imwrite(write_name, img)
         cv2.imshow('img', img)
-        cv2.waitKey(100)
+        cv2.waitKey(50)
 
 cv2.destroyAllWindows()
 
-# Test undistortion on an image
+# Test undistortion on chessboard
 sample_img = cv2.imread(cal_images[0])
 img_size = (sample_img.shape[1], sample_img.shape[0])
 
@@ -51,6 +51,18 @@ for idx, fname in enumerate(cal_images):
     dst = cv2.undistort(img, mtx, dist, None, mtx)
 
     write_name = 'camera_cal/undistorted_calibration' + str(idx) + '.jpg'
+    cv2.imwrite(write_name,dst)
+
+# Test undistortion on images
+test_img = glob.glob('test_images/*')
+
+for idx, fname in enumerate(test_img):
+    print(fname[12:])
+    img = cv2.imread(fname)
+    dst = cv2.undistort(img, mtx, dist, None, mtx)
+
+    write_name = 'test_images/undistorted_' + fname[12:]
+    print(write_name)
     cv2.imwrite(write_name,dst)
 
 # Save the camera calibration result for later use (we won't worry about rvecs / tvecs)
