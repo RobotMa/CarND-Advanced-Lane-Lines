@@ -101,6 +101,49 @@ def hls_select(img, thresh=(0,255)):
     binary_output[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
     return binary_output
 
+def plot_thresholded_images()
+    # Plot the result
+    f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(20, 9))
+    # f.tight_layout()
+    ax1.imshow(gradx, cmap='gray')
+    ax1.set_title('Thresholded Dir. Grad. x', fontsize=30)
+    ax2.imshow(grady, cmap='gray')
+    ax2.set_title('Thresholded Dir. Grad. y', fontsize=30)
+    ax3.imshow(mag_binary, cmap='gray')
+    ax3.set_title('Thresholded Grad. Mag.', fontsize=30)
+    ax4.imshow(dir_binary, cmap='gray')
+    ax4.set_title('Thresholded Grad. Dir.', fontsize=30)
+    ax5.imshow(image)
+    ax5.set_title('Original Image', fontsize=30)
+    ax6.imshow(combined, cmap='gray')
+    ax6.set_title('Combined Thresholded Image', fontsize=30)
+    # plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+    savefig('thresholded_image.png')
+
+def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255) \
+        gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 255, hls_thresh=(0, 255))):
+
+    image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+
+    # Apply each of the thresholding functions
+    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=sobel_ksize, thresh=gx_thresh)
+    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=sobel_ksize, thresh=gy_thresh)
+    mag_binary = mag_thresh(image, sobel_kernel=sobel_ksize, mag_thresh=mag_thresh)
+    dir_binary = dir_threshold(image, sobel_kernel=sobel_ksize, thresh=dir_thresh)
+
+    # Combine all of the thresholding functions
+    combined = np.zeros_like(dir_binary)
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
+
+    s_channel = hls_select(image, thresh=hls_thresh)
+    binary_output = np.zeros_like(combined)
+    binary_output[(s_channel > 0) | (combined > 0)] = 1
+
+    region_combined = region_of_interest(binary_output, vertices)
+
+    return region_combined
+
+
 ksize = 7 # Choose a larger odd number to smooth gradient measurements
 kernel_size = 5
 
@@ -113,46 +156,15 @@ vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
 
 for idx, fname in enumerate(test_img):
     image = cv2.imread(fname)
-    image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+    binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
+                                gy_thresh=(50, 255), mag_thresh=(60, 255), \
+                                dir_thresh=(0.7, 1.10), hls_thresh=(175, 255))
 
-    # Apply each of the thresholding functions
-    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(50, 255))
-    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(50, 255))
-    mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(60, 255))
-    dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.7, 1.10))
-
-    # Combine all of the thresholding functions
-    combined = np.zeros_like(dir_binary)
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
-
-    s_channel = hls_select(image, thresh=(175,255))
-    binary_output = np.zeros_like(combined)
-    binary_output[(s_channel > 0) | (combined > 0)] = 1
-
-    region_combined = region_of_interest(binary_output, vertices)
     # Save image
-    gray = Image.fromarray(region_combined*255)
+    gray = Image.fromarray(binary_output*255)
     write_name = 'output_images/thresholded_' + fname[12:]
     write_name = write_name[:-3] + 'png'
     print(write_name)
     # cv2.imwrite(write_name,combined )
     gray.save(write_name)
-
-# Plot the result
-f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(20, 9))
-# f.tight_layout()
-ax1.imshow(gradx, cmap='gray')
-ax1.set_title('Thresholded Dir. Grad. x', fontsize=30)
-ax2.imshow(grady, cmap='gray')
-ax2.set_title('Thresholded Dir. Grad. y', fontsize=30)
-ax3.imshow(mag_binary, cmap='gray')
-ax3.set_title('Thresholded Grad. Mag.', fontsize=30)
-ax4.imshow(dir_binary, cmap='gray')
-ax4.set_title('Thresholded Grad. Dir.', fontsize=30)
-ax5.imshow(image)
-ax5.set_title('Original Image', fontsize=30)
-ax6.imshow(combined, cmap='gray')
-ax6.set_title('Combined Thresholded Image', fontsize=30)
-# plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-savefig('thresholded_image.png')
 
