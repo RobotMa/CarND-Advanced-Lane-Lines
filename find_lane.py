@@ -143,6 +143,33 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
 
     return region_combined
 
+def corners_unwarp(img, src, dst):
+    # Choose offset from image corners to plot detected corners
+    # This should be chosen to present the result at the proper aspect ratio
+    # My choice of 100 pixels is not exact, but close enough for our purpose here
+    offset = 100 # offset for dst points
+
+    # Grab the image shape
+    img_size = (gray.shape[1], gray.shape[0])
+
+    # For source points I'm grabbing the outer four detected corners
+    src = np.float32([corners[0], corners[nx-1], corners[-1], corners[-nx]])
+
+    # For destination points, I'm arbitrarily choosing some points to be
+    # a nice fit for displaying our warped result
+    # again, not exact, but close enough for our purposes
+    dst = np.float32([[offset, offset], [img_size[0]-offset, offset],
+                                 [img_size[0]-offset, img_size[1]-offset],
+                                 [offset, img_size[1]-offset]])
+    # Given src and dst points, calculate the perspective transform matrix
+    M = cv2.getPerspectiveTransform(src, dst)
+
+    # Warp the image using OpenCV warpPerspective()
+    warped = cv2.warpPerspective(img, M, img_size)
+
+    # Return the resulting image and matrix
+    return warped, M
+
 
 ksize = 7 # Choose a larger odd number to smooth gradient measurements
 kernel_size = 5
