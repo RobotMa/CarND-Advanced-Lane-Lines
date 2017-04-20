@@ -31,7 +31,7 @@ def region_of_interest(img, vertices):
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image
 
-def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
+def abs_sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Calculate directional gradient
     # Apply threshold
     # Apply the following steps to img
@@ -40,9 +40,9 @@ def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     if orient == 'x':
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = sobel_kernel)
     elif orient == 'y':
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize = sobel_kernel)
     # 3) Take the absolute value of the derivative or gradient
     abs_sobel = np.absolute(sobel)
     # 4) Scale to 8-bit (0 - 255) then convert to type = np.uint8
@@ -54,7 +54,7 @@ def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # 6) Return this mask as your binary_output image
     return grad_binary
 
-def mag_thresh(image, sobel_kernel=3, mag_thresh=(0, 255)):
+def mag_threshold(image, sobel_kernel=3, thresh=(0, 255)):
     # Calculate gradient magnitude
     # Apply threshold
     # Apply the following steps to img
@@ -62,8 +62,8 @@ def mag_thresh(image, sobel_kernel=3, mag_thresh=(0, 255)):
     # hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     # 2) Take the gradient in x and y separately
-    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
-    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = sobel_kernel)
+    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize = sobel_kernel)
     # 3) Calculate the magnitude
     gradmagnitude = np.sqrt(sobelx**2 + sobely**2)
     # 4) Scale to 8-bit (0 - 255) and convert to type = np.uint8
@@ -71,7 +71,7 @@ def mag_thresh(image, sobel_kernel=3, mag_thresh=(0, 255)):
     gradmagnitude = (gradmagnitude/scale_factor).astype(np.uint8)
     # 5) Create a binary mask where mag thresholds are met
     mag_binary = np.zeros_like(gradmagnitude)
-    mag_binary[(gradmagnitude >= mag_thresh[0]) & (gradmagnitude <= mag_thresh[1])] = 1
+    mag_binary[(gradmagnitude >= thresh[0]) & (gradmagnitude <= thresh[1])] = 1
     return mag_binary
 
 def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
@@ -101,10 +101,9 @@ def hls_select(img, thresh=(0,255)):
     binary_output[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
     return binary_output
 
-def plot_thresholded_images()
+def plot_thresholded_images(gradx, grady, mag_binary, dir_binary, combined):
     # Plot the result
     f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(20, 9))
-    # f.tight_layout()
     ax1.imshow(gradx, cmap='gray')
     ax1.set_title('Thresholded Dir. Grad. x', fontsize=30)
     ax2.imshow(grady, cmap='gray')
@@ -117,18 +116,17 @@ def plot_thresholded_images()
     ax5.set_title('Original Image', fontsize=30)
     ax6.imshow(combined, cmap='gray')
     ax6.set_title('Combined Thresholded Image', fontsize=30)
-    # plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
     savefig('thresholded_image.png')
 
-def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255) \
-        gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 255, hls_thresh=(0, 255))):
+def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255), \
+        gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 5), hls_thresh=(0, 255)):
 
-    image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+    image = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
     # Apply each of the thresholding functions
-    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=sobel_ksize, thresh=gx_thresh)
-    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=sobel_ksize, thresh=gy_thresh)
-    mag_binary = mag_thresh(image, sobel_kernel=sobel_ksize, mag_thresh=mag_thresh)
+    gradx = abs_sobel_threshold(image, orient='x', sobel_kernel=sobel_ksize, thresh=gx_thresh)
+    grady = abs_sobel_threshold(image, orient='y', sobel_kernel=sobel_ksize, thresh=gy_thresh)
+    mag_binary = mag_threshold(image, sobel_kernel=sobel_ksize, thresh=mag_thresh)
     dir_binary = dir_threshold(image, sobel_kernel=sobel_ksize, thresh=dir_thresh)
 
     # Combine all of the thresholding functions
@@ -140,6 +138,8 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
     binary_output[(s_channel > 0) | (combined > 0)] = 1
 
     region_combined = region_of_interest(binary_output, vertices)
+
+    plot_thresholded_images(gradx, grady, mag_binary, dir_binary, region_combined)
 
     return region_combined
 
@@ -157,14 +157,11 @@ vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
 for idx, fname in enumerate(test_img):
     image = cv2.imread(fname)
     binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
-                                gy_thresh=(50, 255), mag_thresh=(60, 255), \
-                                dir_thresh=(0.7, 1.10), hls_thresh=(175, 255))
+                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(175, 255))
 
     # Save image
     gray = Image.fromarray(binary_output*255)
     write_name = 'output_images/thresholded_' + fname[12:]
     write_name = write_name[:-3] + 'png'
-    print(write_name)
-    # cv2.imwrite(write_name,combined )
     gray.save(write_name)
 
