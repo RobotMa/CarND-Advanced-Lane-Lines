@@ -178,10 +178,17 @@ def plot_region(img, vertices):
 
     # convert numpy array to tuples for cv2.line
     point = []
-    point.append((vertices[0,0,0], vertices[0,0,1]))
-    point.append((vertices[0,1,0], vertices[0,1,1]))
-    point.append((vertices[0,2,0], vertices[0,2,1]))
-    point.append((vertices[0,3,0], vertices[0,3,1]))
+    if type(vertices) is np.ndarray:
+        point.append((vertices[0,0,0], vertices[0,0,1]))
+        point.append((vertices[0,1,0], vertices[0,1,1]))
+        point.append((vertices[0,2,0], vertices[0,2,1]))
+        point.append((vertices[0,3,0], vertices[0,3,1]))
+    elif type(vertices) is list:
+        point.append((vertices[0][0], vertices[0][1]))
+        point.append((vertices[1][0], vertices[1][1]))
+        point.append((vertices[2][0], vertices[2][1]))
+        point.append((vertices[3][0], vertices[3][1]))
+
 
     img_region = cv2.line(img, point[0], point[1], [255, 0, 0], thickness=6)
     img_region = cv2.line(img_region, point[1], point[2], [255, 0, 0], thickness=6)
@@ -204,6 +211,8 @@ def perspective_transform(img, src, mtx, dist):
 
     # Grab the image shape
     img_size = (img.shape[1], img.shape[0])
+
+    # plot_region(img, src)
 
     # For source points I'm grabbing the outer four detected corners
     src = np.float32(src)
@@ -238,7 +247,8 @@ imshape = sample_img.shape
 vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
-area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
+area_of_interest = [[150+430,460],[1150-440,460],[1140,720],[180,720]]
+# area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
 
 # Load the calibrated parameters dist and mtx stored in pickle file
 dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
@@ -248,7 +258,7 @@ for idx, fname in enumerate(test_img):
     binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
-    warped, M, Minv = perspective_transform(image, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
+    warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
     # Save image
     gray = Image.fromarray(binary_output*255)
