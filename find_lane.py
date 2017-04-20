@@ -7,6 +7,30 @@ import pickle
 import glob
 from PIL import Image
 
+# Define a class to receive the characteristics of each line detection
+class Line():
+    def __init__(self):
+        # was the line detected in the last iteration?
+        self.detected = False
+        # x values of the last n fits of the line
+        self.recent_xfitted = []
+        #average x values of the fitted line over the last n iterations
+        self.bestx = None
+        #polynomial coefficients averaged over the last n iterations
+        self.best_fit = None
+        #polynomial coefficients for the most recent fit
+        self.current_fit = [np.array([False])]
+        #radius of curvature of the line in some units
+        self.radius_of_curvature = None
+        #distance in meters of vehicle center from the line
+        self.line_base_pos = None
+        #difference in fit coefficients between last and new fits
+        self.diffs = np.array([0,0,0], dtype='float')
+        #x values for detected line pixels
+        self.allx = None
+        #y values for detected line pixels
+        self.ally = None
+
 def region_of_interest(img, vertices):
     """
     Applies an image mask.
@@ -32,9 +56,11 @@ def region_of_interest(img, vertices):
     return masked_image
 
 def abs_sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
-    # Calculate directional gradient
-    # Apply threshold
-    # Apply the following steps to img
+    """
+      Calculate directional gradient
+      Apply threshold
+      Apply the following steps to img
+    """
     # 1) Convert to grayscale
     #  hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -143,32 +169,40 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
 
     return region_combined
 
-def corners_unwarp(img, src, dst):
+def perspective_transform(img, src, mtx, dist):
+
+    undistort = cv2.undistort(img, mtx, dist, None, mtx)
+
     # Choose offset from image corners to plot detected corners
     # This should be chosen to present the result at the proper aspect ratio
     # My choice of 100 pixels is not exact, but close enough for our purpose here
     offset = 100 # offset for dst points
 
     # Grab the image shape
-    img_size = (gray.shape[1], gray.shape[0])
+    img_size = (img.shape[1], img.shape[0])
 
     # For source points I'm grabbing the outer four detected corners
-    src = np.float32([corners[0], corners[nx-1], corners[-1], corners[-nx]])
+    src = np.float32(src)
 
     # For destination points, I'm arbitrarily choosing some points to be
     # a nice fit for displaying our warped result
     # again, not exact, but close enough for our purposes
-    dst = np.float32([[offset, offset], [img_size[0]-offset, offset],
-                                 [img_size[0]-offset, img_size[1]-offset],
-                                 [offset, img_size[1]-offset]])
+    dst = np.float32([[offset, 0],
+                      [img_size[0]-offset, 0],
+                      [img_size[0]-offset, img_size[1]],
+                      [offset, img_size[1]]])
+
     # Given src and dst points, calculate the perspective transform matrix
     M = cv2.getPerspectiveTransform(src, dst)
 
+    # Given dst and src points, calculate the inverse of perspective transform matrix
+    Minv = cv2.getPerspectiveTransform(dst, src)
+
     # Warp the image using OpenCV warpPerspective()
-    warped = cv2.warpPerspective(img, M, img_size)
+    warped = cv2.warpPerspective(undistort, M, img_size)
 
     # Return the resulting image and matrix
-    return warped, M
+    return warped, M, Minv
 
 
 ksize = 7 # Choose a larger odd number to smooth gradient measurements
@@ -181,14 +215,26 @@ imshape = sample_img.shape
 vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
+area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
+
+# Load the calibrated parameters dist and mtx stored in pickle file
+dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
+
 for idx, fname in enumerate(test_img):
     image = cv2.imread(fname)
     binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(175, 255))
+
+    warped, M, Minv = perspective_transform(image, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
     # Save image
     gray = Image.fromarray(binary_output*255)
     write_name = 'output_images/thresholded_' + fname[12:]
     write_name = write_name[:-3] + 'png'
     gray.save(write_name)
+
+    warped_image = Image.fromarray(warped)
+    write_name_warped = 'output_images/warped_' + fname[12:]
+    write_name_wapred = write_name[:-3] + 'png'
+    warped_image.save(write_name_warped)
 
