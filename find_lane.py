@@ -190,10 +190,10 @@ def plot_region(img, vertices):
         point.append((vertices[3][0], vertices[3][1]))
 
 
-    img_region = cv2.line(img, point[0], point[1], [255, 0, 0], thickness=6)
-    img_region = cv2.line(img_region, point[1], point[2], [255, 0, 0], thickness=6)
-    img_region = cv2.line(img_region, point[2], point[3], [255, 0, 0], thickness=6)
-    img_region = cv2.line(img_region, point[3], point[0], [255, 0, 0], thickness=6)
+    img_region = cv2.line(img, point[0], point[1], [255, 0, 0], thickness=1)
+    img_region = cv2.line(img_region, point[1], point[2], [255, 0, 0], thickness=1)
+    img_region = cv2.line(img_region, point[2], point[3], [255, 0, 0], thickness=1)
+    img_region = cv2.line(img_region, point[3], point[0], [255, 0, 0], thickness=1)
 
     img_region = Image.fromarray(img_region)
     write_name = 'output_images/' + str(cnt) + '.png'
@@ -208,22 +208,22 @@ def perspective_transform(img, src, mtx, dist):
     # This should be chosen to present the result at the proper aspect ratio
     # My choice of 100 pixels is not exact, but close enough for our purpose here
     offset = 100 # offset for dst points
-
+    offset1 = 0
     # Grab the image shape
     img_size = (img.shape[1], img.shape[0])
 
-    # plot_region(img, src)
+    plot_region(img, src)
 
     # For source points I'm grabbing the outer four detected corners
     src = np.float32(src)
 
     # For destination points, I'm arbitrarily choosing some points to be
     # a nice fit for displaying our warped result
-    # again, not exact, but close enough for our purposes
-    dst = np.float32([[offset, 0],
-                      [img_size[0]-offset, 0],
+    dst = np.float32([[offset, offset1],
+                      [img_size[0]-offset, offset1],
                       [img_size[0]-offset, img_size[1]],
                       [offset, img_size[1]]])
+
 
     # Given src and dst points, calculate the perspective transform matrix
     M = cv2.getPerspectiveTransform(src, dst)
@@ -247,7 +247,7 @@ imshape = sample_img.shape
 vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
-area_of_interest = [[150+430,460],[1150-440,460],[1140,720],[180,720]]
+area_of_interest = [[150+430-10,460],[1150-440 + 10,460],[1140 + 30,720],[180-20,720]]
 # area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
 
 # Load the calibrated parameters dist and mtx stored in pickle file
