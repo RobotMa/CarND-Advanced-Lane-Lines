@@ -310,8 +310,15 @@ if __name__ == "__main__":
     white_clip = clip1.fl_image(pipeline)
     white_clip.write_videofile(video_output, audio=False)
 
+    '''
     video_complete = 'complete.mp4'
     clip = VideoFileClip("project_video.mp4")
     white_clip = clip.fl_image(pipeline)
     white_clip.write_videofile(video_complete, audio=False)
+    '''
+
+    video_challenge = 'challenge_video_augmented.mp4'
+    clip2 = VideoFileClip("challenge_video.mp4")
+    white_clip = clip2.fl_image(pipeline)
+    white_clip.write_videofile(video_challenge, audio=False)
 
