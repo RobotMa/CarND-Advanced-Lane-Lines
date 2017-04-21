@@ -232,7 +232,7 @@ if __name__ == "__main__":
     vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
-    area_of_interest = [[720,460],[720,460],[1170,720],[160,720]]
+    area_of_interest = [[570,460],[720,460],[1170,720],[160,720]]
 
     # Load the calibrated parameters dist and mtx stored in pickle file
     dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))

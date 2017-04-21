@@ -22,9 +22,12 @@ The goals / steps of this project are the following:
 [image1]: ./output_images/undistorted_calibration1.jpg "Undistorted"
 [image2]: ./test_images/test1.jpg "Raw Road Image"
 [image3]: ./output_images/thresholded_test1.png "Thresholded Binary Image"
-[image4]: ./output_images/warped_straight_lines.jpg "Warp Example"
-[image5]: ./output_images/color_fit_lines.jpg "Fit Visual"
-[image6]: ./output_images/example_output.jpg "Output"
+[image4]: ./test_images/straight_lines1.jpg "Unwarped Straight Line"
+[image5]: ./output_images/warped_straight_lines1.jpg "Warped Straight Line"
+[image6]: ./output_images/color_fit_lines.jpg "Fit Visual"
+[image7]: ./output_images/color_fit_lines.jpg "Fit Visual"
+[image8]: ./test_images/test3.jpg "Output"
+[image9]: ./output_images/aug_test3.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -69,27 +72,28 @@ Unthresholded              | Thresholded
 The code for my perspective transform includes a function called `perspective_transform()`, which appears in lines 186 through 221 in the file `find_lane.py`.  The `perspective_transform()` function takes as inputs an image (`img`), as well as source (`src`), (`mtx`) and (`dist`). The destination (`dst`) points are hard coded in the body of the `perspective_transform()` function.  The source and destination points in the following manner:
 
 ```
-src = [[720,460],[720,460],[1170,720],[160,720]]
+src = [[570,460],[720,460],[1170,720],[160,720]]
 offset = 100
 dst = np.float32([[offset, offset1],
                   [img_size[0]-offset, offset1],
                   [img_size[0]-offset, img_size[1]],
                   [offset, img_size[1]]])
 
-
 ```
 This resulted in the following source and destination points:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 570, 460      | 100, 0        | 
+| 720, 460      | 1180,0        |
+| 1170, 720     | 1180, 720     |
+| 160, 720      | 100, 720      |
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
+Unwarped                   | Warped 
+:-------------------------:|:-------------------------:
+![alt_text][image4]        |  ![alt_text][image5]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
@@ -99,13 +103,15 @@ Then I did some other stuff and fit my lane lines with a 2nd order polynomial ki
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in lines 282 through 284 (shift with respect to center) and lines 177 through 188 (curvature) in my code in `find_lane_pipeline.py`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines 219 through 301 in my code in `find_lane_pipeline.py` in the function `pipeline()`.  Here is an example of my result on a test image:
 
-![alt text][image6]
+Raw                        | Augmented
+:-------------------------:|:-------------------------:
+![alt_text][image8]        |  ![alt_text][image9]
 
 ---
 
