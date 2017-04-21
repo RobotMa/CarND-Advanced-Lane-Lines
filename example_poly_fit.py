@@ -157,10 +157,12 @@ def process_vid(image):
     if Right_Lane.detected == True:
         rightx, righty, Right_Lane.detected = Right_Lane.found_search(x, y)
 
-    if Right_Lane.detected == False: # Perform blind search for right lane lines
+    # Perform blind search for right lane lines
+    if Right_Lane.detected == False:
         rightx, righty, Right_Lane.detected = Right_Lane.blind_search(x, y, combined_binary)
 
-    if Left_Lane.detected == False:# Perform blind search for left lane lines
+    # Perform blind search for left lane lines
+    if Left_Lane.detected == False:
         leftx, lefty, Left_Lane.detected = Left_Lane.blind_search(x, y, combined_binary)
 
     lefty = np.array(lefty).astype(np.float32)
@@ -254,26 +256,37 @@ def process_vid(image):
     position = (rightx_int+leftx_int)/2
     distance_from_center = abs((640 - position)*3.7/700)
 
+    # create an iamge to draw the lines on
     warp_zero = np.zeros_like(combined_binary).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
     pts_left = np.array([np.flipud(np.transpose(np.vstack([Left_Lane.fitx, Left_Lane.Y])))])
     pts_right = np.array([np.transpose(np.vstack([right_fitx, Right_Lane.Y]))])
     pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
     cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
-    cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
+
+        cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
+
+    # Combine the result with the original image
     result = cv2.addWeighted(undistort, 1, newwarp, 0.5, 0)
 
     # Print distance from center on video
     if position > 640:
         cv2.putText(result, 'Vehicle is {:.2f}m left of center'.format(distance_from_center), (100,80),
-                 fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 2)
+                 fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 3)
     else:
         cv2.putText(result, 'Vehicle is {:.2f}m right of center'.format(distance_from_center), (100,80),
-                 fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 2)
+                 fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 3)
+
     # Print radius of curvature on video
     cv2.putText(result, 'Radius of Curvature {}(m)'.format(int((Left_Lane.radius+Right_Lane.radius)/2)), (120,140),
-             fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 2)
+             fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 3)
     Left_Lane.count += 1
     return result
 
