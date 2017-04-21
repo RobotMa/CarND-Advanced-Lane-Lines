@@ -9,30 +9,6 @@ from PIL import Image
 
 cnt = 0
 
-# Define a class to receive the characteristics of each line detection
-class Line():
-    def __init__(self):
-        # was the line detected in the last iteration?
-        self.detected = False
-        # x values of the last n fits of the line
-        self.recent_xfitted = []
-        #average x values of the fitted line over the last n iterations
-        self.bestx = None
-        #polynomial coefficients averaged over the last n iterations
-        self.best_fit = None
-        #polynomial coefficients for the most recent fit
-        self.current_fit = [np.array([False])]
-        #radius of curvature of the line in some units
-        self.radius_of_curvature = None
-        #distance in meters of vehicle center from the line
-        self.line_base_pos = None
-        #difference in fit coefficients between last and new fits
-        self.diffs = np.array([0,0,0], dtype='float')
-        #x values for detected line pixels
-        self.allx = None
-        #y values for detected line pixels
-        self.ally = None
-
 def region_of_interest(img, vertices):
     """
     Applies an image mask.
@@ -59,9 +35,9 @@ def region_of_interest(img, vertices):
 
 def abs_sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     """
-      Calculate directional gradient
-      Apply threshold
-      Apply the following steps to img
+        Calculate directional gradient
+        Apply threshold
+        Apply the following steps to img
     """
     # 1) Convert to grayscale
     #  hls_binary = hls_select(image, thresh=(90,255))
@@ -83,9 +59,11 @@ def abs_sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     return grad_binary
 
 def mag_threshold(image, sobel_kernel=3, thresh=(0, 255)):
-    # Calculate gradient magnitude
-    # Apply threshold
-    # Apply the following steps to img
+    """
+        Calculate gradient magnitude
+        Apply threshold
+        Apply the following steps to img
+    """
     # 1) Convert to grayscale
     # hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -103,9 +81,11 @@ def mag_threshold(image, sobel_kernel=3, thresh=(0, 255)):
     return mag_binary
 
 def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
-    # Calculate gradient direction
-    # Apply threshold
-    # Apply the following steps to img
+    """
+        Calculate gradient direction
+        Apply threshold
+        Apply the following steps to img
+    """
     # 1) Convert to the S Channel of HLS color space
     # hls_binary = hls_select(image, thresh=(90,255))
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -129,7 +109,7 @@ def hls_select(img, thresh=(0,255)):
     binary_output[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
     return binary_output
 
-def plot_thresholded_images(gradx, grady, mag_binary, dir_binary, combined):
+def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined):
     # Plot the result
     f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(20, 9))
     ax1.imshow(gradx, cmap='gray')
@@ -140,7 +120,7 @@ def plot_thresholded_images(gradx, grady, mag_binary, dir_binary, combined):
     ax3.set_title('Thresholded Grad. Mag.', fontsize=30)
     ax4.imshow(dir_binary, cmap='gray')
     ax4.set_title('Thresholded Grad. Dir.', fontsize=30)
-    ax5.imshow(image)
+    ax5.imshow(img)
     ax5.set_title('Original Image', fontsize=30)
     ax6.imshow(combined, cmap='gray')
     ax6.set_title('Combined Thresholded Image', fontsize=30)
@@ -149,7 +129,7 @@ def plot_thresholded_images(gradx, grady, mag_binary, dir_binary, combined):
 def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255), \
         gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 5), hls_thresh=(0, 255)):
 
-    image = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+    image = cv2.GaussianBlur(img, (gaussian_ksize, gaussian_ksize), 0)
 
     # Apply each of the thresholding functions
     gradx = abs_sobel_threshold(image, orient='x', sobel_kernel=sobel_ksize, thresh=gx_thresh)
@@ -169,7 +149,7 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
 
     plot_region(img, vertices)
 
-    plot_thresholded_images(gradx, grady, mag_binary, dir_binary, region_combined)
+    plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, region_combined)
     return region_combined
 
 def plot_region(img, vertices):
@@ -237,37 +217,49 @@ def perspective_transform(img, src, mtx, dist):
     # Return the resulting image and matrix
     return warped, M, Minv
 
-ksize = 7 # Choose a larger odd number to smooth gradient measurements
-kernel_size = 5
+if __name__ == "__main__":
 
-test_img = glob.glob('test_images/*')
+    ksize = 7 # Choose a larger odd number to smooth gradient measurements
+    kernel_size = 5
 
-sample_img = cv2.imread(test_img[0])
-imshape = sample_img.shape
-vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
+    test_img = glob.glob('test_images/*')
+    sample_img = cv2.imread(test_img[0])
+
+    imshape = sample_img.shape
+    vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
-area_of_interest = [[150+430-10,460],[1150-440 + 10,460],[1140 + 30,720],[180-20,720]]
-# area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
+    area_of_interest = [[150+430-10,460],[1150-440 + 10,460],[1140 + 30,720],[180-20,720]]
+    # area_of_interest = [[150+430,460],[1150-440,460],[1150,720],[150,720]]
 
-# Load the calibrated parameters dist and mtx stored in pickle file
-dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
+    # Load the calibrated parameters dist and mtx stored in pickle file
+    dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
 
-for idx, fname in enumerate(test_img):
-    image = cv2.imread(fname)
-    binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
+    for idx, fname in enumerate(test_img):
+        image = cv2.imread(fname)
+        binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
-    warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
+        imgimg = Image.fromarray(image)
+        imgimg.save('question1.png')
+        x, y = np.nonzero(np.transpose(binary_output))
+        print(x)
+        print(y)
+        warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
-    # Save image
-    gray = Image.fromarray(binary_output*255)
-    write_name = 'output_images/thresholded_' + fname[12:]
-    write_name = write_name[:-3] + 'png'
-    gray.save(write_name)
+        x, y = np.nonzero(np.transpose(binary_output))
+        print(x)
+        print(y)
+        print(binary_output)
 
-    warped_image = Image.fromarray(warped*255)
-    write_name_warped = 'output_images/warped_' + fname[12:]
-    write_name_wapred = write_name[:-3] + 'png'
-    warped_image.save(write_name_warped)
+        # Save image
+        gray = Image.fromarray(binary_output*255)
+        write_name = 'output_images/thresholded_' + fname[12:]
+        write_name = write_name[:-3] + 'png'
+        gray.save(write_name)
+
+        warped_image = Image.fromarray(warped*255)
+        write_name_warped = 'output_images/warped_' + fname[12:]
+        write_name_wapred = write_name[:-3] + 'png'
+        warped_image.save(write_name_warped)
 

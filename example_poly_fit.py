@@ -3,6 +3,7 @@ from collections import deque
 from moviepy.editor import VideoFileClip
 import cv2
 import glob
+from find_lane import *
 
 class Line:
     def __init__(self):
@@ -112,21 +113,44 @@ class Line:
 
 # Video Processing Pipeline
 def process_vid(image):
-    img_size = (image.shape[1], image.shape[0])
 
-    # Calibrate camera and undistort image
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
-    undist = cv2.undistort(image, mtx, dist, None, mtx)
+    print(image)
+
+    ksize = 7
+    kernel_size = 5
+
+    imshape = (image.shape[1], image.shape[0])
+
+    vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
+                      (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
+
+    area_of_interest = [[150+430-10,460],[1150-440 + 10,460],[1140 + 30,720],[180-20,720]]
+
+    # Load the calibrated parameters dist and mtx stored in pickle file
+    dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
+
+    undistort = cv2.undistort(image, dist_pickle['mtx'], dist_pickle['dist'], None, dist_pickle['mtx'])
+
+    print('after undistorting')
+    print(image)
+    imgimg = Image.fromarray(image)
+    imgimg.save('trial2.png')
+    combined_binary = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
+                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
+
+    cb = Image.fromarray(combined_binary)
+    cb.save('trial.png')
+    print(combined_binary)
+    x, y = np.nonzero(np.transpose(combined_binary))
+    print(x)
+    print(y)
 
     # Perform perspective transform
-    offset = 0
-    src = np.float32([[490, 482],[810, 482],
-                      [1250, 720],[0, 720]])
-    dst = np.float32([[0, 0], [1280, 0],
-                     [1250, 720],[40, 720]])
-    M = cv2.getPerspectiveTransform(src, dst)
-    warped = cv2.warpPerspective(undist, M, img_size)
+    warped_img, M, Minv = perspective_transform(combined_binary, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
+    cb = Image.fromarray(combined_binary)
+    cb.save('trial1.png')
 
+    '''
     # Generate binary thresholded images
     b_channel = cv2.cvtColor(warped, cv2.COLOR_RGB2Lab)[:,:,2]
     l_channel = cv2.cvtColor(warped, cv2.COLOR_RGB2LUV)[:,:,0]
@@ -145,9 +169,18 @@ def process_vid(image):
 
     combined_binary = np.zeros_like(b_binary)
     combined_binary[(l_binary == 1) | (b_binary == 1)] = 1
+    '''
+
+    # print(warped.shape)
+    print(combined_binary.shape)
+    print(combined_binary)
+
 
     # Identify all non zero pixels in the image
     x, y = np.nonzero(np.transpose(combined_binary))
+
+    print(x)
+    print(y)
 
     if Left.found == True: # Search for left lane pixels around previous polynomial
         leftx, lefty, Left.found = Left.found_search(x, y)
@@ -167,6 +200,10 @@ def process_vid(image):
     righty = np.array(righty).astype(np.float32)
     rightx = np.array(rightx).astype(np.float32)
 
+    print(lefty)
+    print(leftx)
+    print(righty)
+    print(rightx)
     # Calculate left polynomial fit based on detected pixels
     left_fit = np.polyfit(lefty, leftx, 2)
 
@@ -253,8 +290,6 @@ def process_vid(image):
     position = (rightx_int+leftx_int)/2
     distance_from_center = abs((640 - position)*3.7/700)
 
-    Minv = cv2.getPerspectiveTransform(dst, src)
-
     warp_zero = np.zeros_like(combined_binary).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
     pts_left = np.array([np.flipud(np.transpose(np.vstack([Left.fitx, Left.Y])))])
@@ -263,7 +298,7 @@ def process_vid(image):
     cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
     cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
     newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
-    result = cv2.addWeighted(undist, 1, newwarp, 0.5, 0)
+    result = cv2.addWeighted(undistort, 1, newwarp, 0.5, 0)
 
     # Print distance from center on video
     if position > 640:
