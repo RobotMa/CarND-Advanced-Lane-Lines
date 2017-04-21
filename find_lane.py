@@ -105,9 +105,9 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
 def hls_select(img, thresh=(0,255)):
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     s_channel = hls[:,:,2]
-    binary_output = np.zeros_like(s_channel)
-    binary_output[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
-    return binary_output
+    binary_hls = np.zeros_like(s_channel)
+    binary_hls[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
+    return binary_hls
 
 def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined):
     # Plot the result
@@ -142,10 +142,10 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
     combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
 
     s_channel = hls_select(image, thresh=hls_thresh)
-    binary_output = np.zeros_like(combined)
-    binary_output[(s_channel > 0) | (combined > 0)] = 1
+    binary_out = np.zeros_like(combined)
+    binary_out[(s_channel > 0) | (combined > 0)] = 1
 
-    region_combined = region_of_interest(binary_output, vertices)
+    region_combined = region_of_interest(binary_out, vertices)
 
     plot_region(img, vertices)
 
@@ -240,17 +240,8 @@ if __name__ == "__main__":
         binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
-        imgimg = Image.fromarray(image)
-        imgimg.save('question1.png')
-        x, y = np.nonzero(np.transpose(binary_output))
-        print(x)
-        print(y)
         warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
-        x, y = np.nonzero(np.transpose(binary_output))
-        print(x)
-        print(y)
-        print(binary_output)
 
         # Save image
         gray = Image.fromarray(binary_output*255)

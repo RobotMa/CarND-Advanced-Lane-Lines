@@ -114,12 +114,10 @@ class Line:
 # Video Processing Pipeline
 def process_vid(image):
 
-    print(image)
-
     ksize = 7
     kernel_size = 5
 
-    imshape = (image.shape[1], image.shape[0])
+    imshape = image.shape
 
     vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
@@ -131,24 +129,13 @@ def process_vid(image):
 
     undistort = cv2.undistort(image, dist_pickle['mtx'], dist_pickle['dist'], None, dist_pickle['mtx'])
 
-    print('after undistorting')
-    print(image)
-    imgimg = Image.fromarray(image)
-    imgimg.save('trial2.png')
-    combined_binary = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
+    # import ipdb; ipdb.set_trace() #
+
+    binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
-    cb = Image.fromarray(combined_binary)
-    cb.save('trial.png')
-    print(combined_binary)
-    x, y = np.nonzero(np.transpose(combined_binary))
-    print(x)
-    print(y)
-
     # Perform perspective transform
-    warped_img, M, Minv = perspective_transform(combined_binary, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
-    cb = Image.fromarray(combined_binary)
-    cb.save('trial1.png')
+    combined_binary, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
     '''
     # Generate binary thresholded images
@@ -171,16 +158,8 @@ def process_vid(image):
     combined_binary[(l_binary == 1) | (b_binary == 1)] = 1
     '''
 
-    # print(warped.shape)
-    print(combined_binary.shape)
-    print(combined_binary)
-
-
     # Identify all non zero pixels in the image
     x, y = np.nonzero(np.transpose(combined_binary))
-
-    print(x)
-    print(y)
 
     if Left.found == True: # Search for left lane pixels around previous polynomial
         leftx, lefty, Left.found = Left.found_search(x, y)
