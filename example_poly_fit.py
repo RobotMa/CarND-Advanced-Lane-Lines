@@ -115,40 +115,40 @@ class Line:
         """
 
         # Calculate right polynomial fit based on detected pixels
-        right_fit = np.polyfit(righty, rightx, 2)
+        fit = np.polyfit(y, x, 2)
 
         # Calculate intercepts to extend the polynomial to the top and bottom of warped image
-        rightx_int, right_top = self.get_intercepts(right_fit)
+        bottom, top = self.get_intercepts(fit)
 
         # Average intercepts across 5 frames
-        self.x_int.append(rightx_int)
-        rightx_int = np.mean(self.x_int)
-        self.top.append(right_top)
-        right_top = np.mean(self.top)
-        self.lastx_int = rightx_int
-        self.last_top = right_top
-        rightx = np.append(rightx, rightx_int)
-        righty = np.append(righty, 720)
-        rightx = np.append(rightx, right_top)
-        righty = np.append(righty, 0)
+        self.x_int.append(bottom)
+        bottom = np.mean(self.x_int)
+        self.top.append(top)
+        top = np.mean(self.top)
+        self.lastx_int = bottom
+        self.last_top = top
+        x = np.append(x, bottom)
+        y = np.append(y, 720)
+        x = np.append(x, top)
+        y = np.append(y, 0)
 
         # Sort right lane pixels
-        rightx, righty = self.sort_vals(rightx, righty)
-        self.X = rightx
-        self.Y = righty
+        x, y = self.sort_vals(x, y)
+        self.X = x
+        self.Y = y
 
         # Recalculate polynomial with intercepts and average across n frames
-        right_fit = np.polyfit(righty, rightx, 2)
-        self.fit0.append(right_fit[0])
-        self.fit1.append(right_fit[1])
-        self.fit2.append(right_fit[2])
-        right_fit = [np.mean(self.fit0), np.mean(self.fit1), np.mean(self.fit2)]
+        fit = np.polyfit(y, x, 2)
+        self.fit0.append(fit[0])
+        self.fit1.append(fit[1])
+        self.fit2.append(fit[2])
+        fit = [np.mean(self.fit0), np.mean(self.fit1), np.mean(self.fit2)]
 
         # Fit polynomial to detected pixels
-        right_fitx = right_fit[0]*righty**2 + right_fit[1]*righty + right_fit[2]
-        self.fitx = right_fitx
+        fitx = fit[0]*y**2 + fit[1]*y + fit[2]
+        self.fitx = fitx
 
-        return rightx, righty, rightx_int
+        return x, y, bottom
 
     def sort_vals(self, xvals, yvals):
         sorted_index = np.argsort(yvals)
@@ -258,6 +258,7 @@ def pipeline(image):
     righty = np.array(righty).astype(np.float32)
     rightx = np.array(rightx).astype(np.float32)
 
+    '''
     # Calculate left polynomial fit based on detected pixels
     left_fit = np.polyfit(lefty, leftx, 2)
 
@@ -296,8 +297,9 @@ def pipeline(image):
     # Fit polynomial to detected pixels
     left_fitx = left_fit[0]*lefty**2 + left_fit[1]*lefty + left_fit[2]
     Left_Lane.fitx = left_fitx
+    '''
 
-
+    leftx, lefty, leftx_int = Left_Lane.fit_polynomial(leftx, lefty)
     rightx, righty, rightx_int = Right_Lane.fit_polynomial(rightx, righty)
 
     # Compute radius of curvature for each lane in meters
