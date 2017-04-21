@@ -18,10 +18,10 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image0]: ./output_images/calibration1.jpg "Distorted"
+[image0]: ./camera_cal/calibration1.jpg "Distorted"
 [image1]: ./output_images/undistorted_calibration1.jpg "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./output_images/binary_combo_example.jpg "Binary Example"
+[image2]: ./test_images/test1.jpg "Raw Road Image"
+[image3]: ./output_images/thresholded_test1.png "Thresholded Binary Image"
 [image4]: ./output_images/warped_straight_lines.jpg "Warp Example"
 [image5]: ./output_images/color_fit_lines.jpg "Fit Visual"
 [image6]: ./output_images/example_output.jpg "Output"
@@ -46,7 +46,7 @@ I start by preparing "object points", which will be the (x, y, z) coordinates of
 
 I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
 
-Solarized dark             |  Solarized Ocean
+Distorted                  |  Undistorted
 :-------------------------:|:-------------------------:
 ![alt_text][image0]        |  ![alt_text][image1]
 
@@ -56,25 +56,26 @@ Solarized dark             |  Solarized Ocean
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
 ![alt text][image2]
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 36 through 110 and lines 129 through 156 in `find_lane.py`).  Four different kinds of gradient related thresholds are applied onto the grayscaled image, and then the S channel of HLS color space of the image is extracted out. The thresholded grayscaled image and the S channel are then fused to obtain the final result. The tuning of various threshold parameters is the key to the
+success of identifying the lanes with less noise. Here's an example of my output for this step.  
 
-![alt text][image3]
+Unthresholded              | Thresholded 
+:-------------------------:|:-------------------------:
+![alt_text][image2]        |  ![alt_text][image3]
+
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `perspective_transform()`, which appears in lines 186 through 221 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `perspective_transform()`, which appears in lines 186 through 221 in the file `find_lane.py`.  The `perspective_transform()` function takes as inputs an image (`img`), as well as source (`src`), (`mtx`) and (`dist`). The destination (`dst`) points are hard coded in the body of the `perspective_transform()` function.  The source and destination points in the following manner:
 
 ```
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+src = [[720,460],[720,460],[1170,720],[160,720]]
+offset = 100
+dst = np.float32([[offset, offset1],
+                  [img_size[0]-offset, offset1],
+                  [img_size[0]-offset, img_size[1]],
+                  [offset, img_size[1]]])
+
 
 ```
 This resulted in the following source and destination points:
@@ -112,8 +113,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](https://www.youtube.com/watch?v=ueWy_6RVo0E)
-
+Here's a [link to my video result](https://www.youtube.com/watch?v=ueWy_6RVo0E). 
 ---
 
 ### Discussion
@@ -121,4 +121,6 @@ Here's a [link to my video result](https://www.youtube.com/watch?v=ueWy_6RVo0E)
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
+The pipeline works pretty well in general, however, there is a wobble at the end of the video. 
 
