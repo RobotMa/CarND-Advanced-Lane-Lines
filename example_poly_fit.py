@@ -179,10 +179,6 @@ def process_vid(image):
     righty = np.array(righty).astype(np.float32)
     rightx = np.array(rightx).astype(np.float32)
 
-    print(lefty)
-    print(leftx)
-    print(righty)
-    print(rightx)
     # Calculate left polynomial fit based on detected pixels
     left_fit = np.polyfit(lefty, leftx, 2)
 
@@ -296,6 +292,10 @@ def process_vid(image):
 Left = Line()
 Right = Line()
 video_output = 'result.mp4'
+video_complete = 'complete.mp4'
 clip1 = VideoFileClip("project_video.mp4").subclip(0,2)
 white_clip = clip1.fl_image(process_vid)
 white_clip.write_videofile(video_output, audio=False)
+clip = VideoFileClip("project_video.mp4")
+white_clip = clip.fl_image(process_vid)
+white_clip.write_videofile(video_complete, audio=False)

@@ -127,7 +127,7 @@ def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined)
     savefig('thresholded_image.png')
 
 def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255), \
-        gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 5), hls_thresh=(0, 255)):
+        gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 5), hls_thresh=(0, 255),  plot_opt=False):
 
     image = cv2.GaussianBlur(img, (gaussian_ksize, gaussian_ksize), 0)
 
@@ -147,9 +147,12 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
 
     region_combined = region_of_interest(binary_out, vertices)
 
-    plot_region(img, vertices)
+    if plot_opt == True:
+        # Plot the masked raw image
+        plot_region(img, vertices)
+        # Plot the thresholded image
+        plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, region_combined)
 
-    plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, region_combined)
     return region_combined
 
 def plot_region(img, vertices):
@@ -238,7 +241,7 @@ if __name__ == "__main__":
     for idx, fname in enumerate(test_img):
         image = cv2.imread(fname)
         binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
-                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
+                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255), plot_opt=True)
 
         warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
