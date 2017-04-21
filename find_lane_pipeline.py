@@ -38,24 +38,33 @@ class Line:
         # Count of the frames
         self.cnt = 0
 
-    def augment_search(self, x, y):
+    def augment_search(self, x, y, image):
         '''
             Search for the pixels in close proximity to the detected polynomial in the previous frame
+            Note: assume that the shape of the image is fixed (coming from the same video)
         '''
+        midpoint = np.int(image.shape[1]/2)
+        window_height = np.int(image.shape[0]/self.N_WINDOWS)
+
         x_vec = []
         y_vec = []
-        i = 720
-        j = 630
-        while j >= 0:
-            yval = np.mean([i,j])
+
+        x_range = 25
+
+        for i in range(self.N_WINDOWS):
+
+            win_up   = i*window_height
+            win_down = (i + 1)*window_height
+
+            yval = np.mean([win_up,win_down])
             xval = (np.mean(self.fit0))*yval**2 + (np.mean(self.fit1))*yval + (np.mean(self.fit2))
-            x_idx = np.where((((xval - 25) < x)&(x < (xval + 25))&((y > j) & (y < i))))
-            x_window, y_window = x[x_idx], y[x_idx]
+
+            idx = np.where((((xval - x_range) < x) & (x < (xval + x_range)) & (y > win_up) & (y < win_down)))
+            x_window, y_window = x[idx], y[idx]
+
             if np.sum(x_window) != 0:
                 np.append(x_vec, x_window)
                 np.append(y_vec, y_window)
-            i -= 90
-            j -= 90
 
         # Perform blind search for next search if no pixels are found
         if np.sum(x_vec) == 0:
@@ -64,7 +73,7 @@ class Line:
         x_vec = np.array(x_vec).astype(np.float32)
         y_vec = np.array(y_vec).astype(np.float32)
 
-        return x_vec, y_vec, self.detected
+        return x_vec, y_vec
 
     def blind_search(self, x, y, image):
         '''
@@ -76,27 +85,29 @@ class Line:
         x_vec = []
         y_vec = []
 
-        i = 720
-        j = 630
+        # Range (along the x-axis) around the peak to search for non-zero pixels in the binary image
+        x_range = 25
 
-        while j >= 0:
+        for i in range(self.N_WINDOWS):
+
+            win_up   = i*window_height
+            win_down = (i + 1)*window_height
 
             # Take a histogram of a window of the image
-            histogram = np.sum(image[j:i,:], axis=0)
+            histogram = np.sum(image[win_up:win_down,:], axis=0)
 
             if self == Left_Lane:
                 peak = np.argmax(histogram[:midpoint])
             else:
                 peak = np.argmax(histogram[midpoint:]) + 640
 
-            x_idx = np.where((((peak - 25) < x)&(x < (peak + 25))&((y > j) & (y < i))))
-            x_window, y_window = x[x_idx], y[x_idx]
+            # Get the indecies of points that fall within both the window and the range
+            idx = np.where((((peak - x_range) < x) & (x < (peak + x_range)) & (y > win_up) & (y < win_down)))
+            x_window, y_window = x[idx], y[idx]
 
             if np.sum(x_window) != 0:
                 x_vec.extend(x_window)
                 y_vec.extend(y_window)
-            i -= 90
-            j -= 90
 
         if np.sum(x_vec) > 0:
             self.detected = True
@@ -107,7 +118,7 @@ class Line:
         x_vec = np.array(x_vec).astype(np.float32)
         y_vec = np.array(y_vec).astype(np.float32)
 
-        return x_vec, y_vec, self.detected
+        return x_vec, y_vec
 
     def fit_polynomial(self, x, y, imshape):
         """
@@ -121,7 +132,7 @@ class Line:
         # Calculate intercepts to extend the polynomial to the top and bottom of warped image
         bottom, top = self.get_intercepts(fit, imshape)
 
-        # Average intercepts across 5 frames
+        # Compute the average of top and bottom peak x positions for 5 frames
         self.bottom.append(bottom)
         bottom = np.mean(self.bottom)
         self.top.append(top)
@@ -134,12 +145,12 @@ class Line:
         x = np.append(x, top)
         y = np.append(y, 0)
 
-        # Sort right lane pixels
+        # Sort lane pixels
         x, y = self.sort_vec(x, y)
         self.x_vec = x
         self.y_vec = y
 
-        # Recalculate polynomial with intercepts and average across n frames
+        # Recalculate polynomial with intercepts and average across 10 frames
         fit = np.polyfit(y, x, 2)
         self.fit0.append(fit[0])
         self.fit1.append(fit[1])
@@ -240,19 +251,19 @@ def pipeline(image):
     # import ipdb; ipdb.set_trace() #
     # Search for left lane pixels around previous polynomial
     if Left_Lane.detected == True:
-        leftx, lefty, Left_Lane.detected = Left_Lane.augment_search(x, y)
+        leftx, lefty = Left_Lane.augment_search(x, y, combined_binary)
 
     # Search for right lane pixels around previous polynomial
     if Right_Lane.detected == True:
-        rightx, righty, Right_Lane.detected = Right_Lane.augment_search(x, y)
+        rightx, righty = Right_Lane.augment_search(x, y, combined_binary)
 
     # Search for right lane from scratch
     if Right_Lane.detected == False:
-        rightx, righty, Right_Lane.detected = Right_Lane.blind_search(x, y, combined_binary)
+        rightx, righty = Right_Lane.blind_search(x, y, combined_binary)
 
     # Search for left lane from scratch
     if Left_Lane.detected == False:
-        leftx, lefty, Left_Lane.detected = Left_Lane.blind_search(x, y, combined_binary)
+        leftx, lefty = Left_Lane.blind_search(x, y, combined_binary)
 
     leftx, lefty, leftx_bottom = Left_Lane.fit_polynomial(leftx, lefty, imshape)
     rightx, righty, rightx_bottom = Right_Lane.fit_polynomial(rightx, righty, imshape)
