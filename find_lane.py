@@ -195,7 +195,7 @@ def perspective_transform(img, src, mtx, dist):
     # Grab the image shape
     img_size = (img.shape[1], img.shape[0])
 
-    plot_region(img, src)
+    # plot_region(img, src)
 
     # For source points I'm grabbing the outer four detected corners
     src = np.float32(src)

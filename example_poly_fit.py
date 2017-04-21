@@ -8,7 +8,7 @@ from find_lane import *
 class Line:
     def __init__(self):
         # Was the line found in the previous frame?
-        self.found = False
+        self.detected = False
 
         # Remember x and y values of lanes in previous frame
         self.X = None
@@ -43,7 +43,7 @@ class Line:
         '''
         xvals = []
         yvals = []
-        if self.found == True:
+        if self.detected == True:
             i = 720
             j = 630
             while j >= 0:
@@ -57,8 +57,8 @@ class Line:
                 i -= 90
                 j -= 90
         if np.sum(xvals) == 0:
-            self.found = False # If no lane pixels were detected then perform blind search
-        return xvals, yvals, self.found
+            self.detected = False # If no lane pixels were detected then perform blind search
+        return xvals, yvals, self.detected
 
     def blind_search(self, x, y, image):
         '''
@@ -69,7 +69,7 @@ class Line:
         '''
         xvals = []
         yvals = []
-        if self.found == False:
+        if self.detected == False:
             i = 720
             j = 630
             while j >= 0:
@@ -86,11 +86,11 @@ class Line:
                 i -= 90
                 j -= 90
         if np.sum(xvals) > 0:
-            self.found = True
+            self.detected = True
         else:
             yvals = self.Y
             xvals = self.X
-        return xvals, yvals, self.found
+        return xvals, yvals, self.detected
 
     def radius_of_curvature(self, xvals, yvals):
         ym_per_pix = 30./720 # meters per pixel in y dimension
@@ -119,60 +119,40 @@ def process_vid(image):
 
     imshape = image.shape
 
+    # Define vertices for masking the region of interest
     vertices = np.array([[(30,imshape[0]),(imshape[1]/2 - 10, imshape[0]/2 + 45), \
                       (imshape[1]/2 + 10, imshape[0]/2 + 45), (imshape[1] - 30,imshape[0])]], dtype=np.int32)
 
-    area_of_interest = [[150+430-10,460],[1150-440 + 10,460],[1140 + 30,720],[180-20,720]]
+    # Define the area for perspective transform
+    area_of_interest = [[150+420,460], [1150-430,460], [1170,720], [160,720]]
 
     # Load the calibrated parameters dist and mtx stored in pickle file
     dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
 
     undistort = cv2.undistort(image, dist_pickle['mtx'], dist_pickle['dist'], None, dist_pickle['mtx'])
 
-    # import ipdb; ipdb.set_trace() #
-
-    binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
+    binary_output = binary_lane(undistort, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
     # Perform perspective transform
     combined_binary, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 
-    '''
-    # Generate binary thresholded images
-    b_channel = cv2.cvtColor(warped, cv2.COLOR_RGB2Lab)[:,:,2]
-    l_channel = cv2.cvtColor(warped, cv2.COLOR_RGB2LUV)[:,:,0]
-
-    # Set the upper and lower thresholds for the b channel
-    b_thresh_min = 145
-    b_thresh_max = 200
-    b_binary = np.zeros_like(b_channel)
-    b_binary[(b_channel >= b_thresh_min) & (b_channel <= b_thresh_max)] = 1
-
-    # Set the upper and lower thresholds for the l channel
-    l_thresh_min = 215
-    l_thresh_max = 255
-    l_binary = np.zeros_like(l_channel)
-    l_binary[(l_channel >= l_thresh_min) & (l_channel <= l_thresh_max)] = 1
-
-    combined_binary = np.zeros_like(b_binary)
-    combined_binary[(l_binary == 1) | (b_binary == 1)] = 1
-    '''
 
     # Identify all non zero pixels in the image
     x, y = np.nonzero(np.transpose(combined_binary))
 
-    if Left.found == True: # Search for left lane pixels around previous polynomial
-        leftx, lefty, Left.found = Left.found_search(x, y)
+    if Left.detected == True: # Search for left lane pixels around previous polynomial
+        leftx, lefty, Left.detected = Left.found_search(x, y)
 
-    if Right.found == True: # Search for right lane pixels around previous polynomial
-        rightx, righty, Right.found = Right.found_search(x, y)
+    if Right.detected == True: # Search for right lane pixels around previous polynomial
+        rightx, righty, Right.detected = Right.found_search(x, y)
 
 
-    if Right.found == False: # Perform blind search for right lane lines
-        rightx, righty, Right.found = Right.blind_search(x, y, combined_binary)
+    if Right.detected == False: # Perform blind search for right lane lines
+        rightx, righty, Right.detected = Right.blind_search(x, y, combined_binary)
 
-    if Left.found == False:# Perform blind search for left lane lines
-        leftx, lefty, Left.found = Left.blind_search(x, y, combined_binary)
+    if Left.detected == False:# Perform blind search for left lane lines
+        leftx, lefty, Left.detected = Left.blind_search(x, y, combined_binary)
 
     lefty = np.array(lefty).astype(np.float32)
     leftx = np.array(leftx).astype(np.float32)
