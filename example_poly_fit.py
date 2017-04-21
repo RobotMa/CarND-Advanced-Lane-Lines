@@ -74,7 +74,7 @@ class Line:
             j = 630
             while j >= 0:
                 histogram = np.sum(image[j:i,:], axis=0)
-                if self == Right:
+                if self == Right_Lane:
                     peak = np.argmax(histogram[640:]) + 640
                 else:
                     peak = np.argmax(histogram[:640])
@@ -85,17 +85,24 @@ class Line:
                     yvals.extend(y_window)
                 i -= 90
                 j -= 90
+
         if np.sum(xvals) > 0:
             self.detected = True
         else:
             yvals = self.Y
             xvals = self.X
+
         return xvals, yvals, self.detected
 
     def radius_of_curvature(self, xvals, yvals):
+        # Define conversion in x and y from pixels space to meters
         ym_per_pix = 30./720 # meters per pixel in y dimension
         xm_per_pix = 3.7/700 # meteres per pixel in x dimension
+
+        # Fit new polynomials to x,y in world space
         fit_cr = np.polyfit(yvals*ym_per_pix, xvals*xm_per_pix, 2)
+
+        # Calculate the new radii of curvature
         curverad = ((1 + (2*fit_cr[0]*np.max(yvals) + fit_cr[1])**2)**1.5) \
                                      /np.absolute(2*fit_cr[0])
         return curverad
@@ -116,7 +123,6 @@ def process_vid(image):
 
     ksize = 7
     kernel_size = 5
-
     imshape = image.shape
 
     # Define vertices for masking the region of interest
@@ -129,8 +135,10 @@ def process_vid(image):
     # Load the calibrated parameters dist and mtx stored in pickle file
     dist_pickle = pickle.load( open("camera_cal/wide_dist_pickle.p", "rb"))
 
+    # Undistort the raw image
     undistort = cv2.undistort(image, dist_pickle['mtx'], dist_pickle['dist'], None, dist_pickle['mtx'])
 
+    # Compute the binary image using various thresholding techniques
     binary_output = binary_lane(undistort, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
                                 gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
 
@@ -141,18 +149,19 @@ def process_vid(image):
     # Identify all non zero pixels in the image
     x, y = np.nonzero(np.transpose(combined_binary))
 
-    if Left.detected == True: # Search for left lane pixels around previous polynomial
-        leftx, lefty, Left.detected = Left.found_search(x, y)
+    # Search for left lane pixels around previous polynomial
+    if Left_Lane.detected == True:
+        leftx, lefty, Left_Lane.detected = Left_Lane.found_search(x, y)
 
-    if Right.detected == True: # Search for right lane pixels around previous polynomial
-        rightx, righty, Right.detected = Right.found_search(x, y)
+    # Search for right lane pixels around previous polynomial
+    if Right_Lane.detected == True:
+        rightx, righty, Right_Lane.detected = Right_Lane.found_search(x, y)
 
+    if Right_Lane.detected == False: # Perform blind search for right lane lines
+        rightx, righty, Right_Lane.detected = Right_Lane.blind_search(x, y, combined_binary)
 
-    if Right.detected == False: # Perform blind search for right lane lines
-        rightx, righty, Right.detected = Right.blind_search(x, y, combined_binary)
-
-    if Left.detected == False:# Perform blind search for left lane lines
-        leftx, lefty, Left.detected = Left.blind_search(x, y, combined_binary)
+    if Left_Lane.detected == False:# Perform blind search for left lane lines
+        leftx, lefty, Left_Lane.detected = Left_Lane.blind_search(x, y, combined_binary)
 
     lefty = np.array(lefty).astype(np.float32)
     leftx = np.array(leftx).astype(np.float32)
@@ -163,15 +172,15 @@ def process_vid(image):
     left_fit = np.polyfit(lefty, leftx, 2)
 
     # Calculate intercepts to extend the polynomial to the top and bottom of warped image
-    leftx_int, left_top = Left.get_intercepts(left_fit)
+    leftx_int, left_top = Left_Lane.get_intercepts(left_fit)
 
     # Average intercepts across n frames
-    Left.x_int.append(leftx_int)
-    Left.top.append(left_top)
-    leftx_int = np.mean(Left.x_int)
-    left_top = np.mean(Left.top)
-    Left.lastx_int = leftx_int
-    Left.last_top = left_top
+    Left_Lane.x_int.append(leftx_int)
+    Left_Lane.top.append(left_top)
+    leftx_int = np.mean(Left_Lane.x_int)
+    left_top = np.mean(Left_Lane.top)
+    Left_Lane.lastx_int = leftx_int
+    Left_Lane.last_top = left_top
 
     # Add averaged intercepts to current x and y vals
     leftx = np.append(leftx, leftx_int)
@@ -180,66 +189,66 @@ def process_vid(image):
     lefty = np.append(lefty, 0)
 
     # Sort detected pixels based on the yvals
-    leftx, lefty = Left.sort_vals(leftx, lefty)
+    leftx, lefty = Left_Lane.sort_vals(leftx, lefty)
 
-    Left.X = leftx
-    Left.Y = lefty
+    Left_Lane.X = leftx
+    Left_Lane.Y = lefty
 
     # Recalculate polynomial with intercepts and average across n frames
     left_fit = np.polyfit(lefty, leftx, 2)
-    Left.fit0.append(left_fit[0])
-    Left.fit1.append(left_fit[1])
-    Left.fit2.append(left_fit[2])
-    left_fit = [np.mean(Left.fit0),
-                np.mean(Left.fit1),
-                np.mean(Left.fit2)]
+    Left_Lane.fit0.append(left_fit[0])
+    Left_Lane.fit1.append(left_fit[1])
+    Left_Lane.fit2.append(left_fit[2])
+    left_fit = [np.mean(Left_Lane.fit0),
+                np.mean(Left_Lane.fit1),
+                np.mean(Left_Lane.fit2)]
 
     # Fit polynomial to detected pixels
     left_fitx = left_fit[0]*lefty**2 + left_fit[1]*lefty + left_fit[2]
-    Left.fitx = left_fitx
+    Left_Lane.fitx = left_fitx
 
     # Calculate right polynomial fit based on detected pixels
     right_fit = np.polyfit(righty, rightx, 2)
 
     # Calculate intercepts to extend the polynomial to the top and bottom of warped image
-    rightx_int, right_top = Right.get_intercepts(right_fit)
+    rightx_int, right_top = Right_Lane.get_intercepts(right_fit)
 
     # Average intercepts across 5 frames
-    Right.x_int.append(rightx_int)
-    rightx_int = np.mean(Right.x_int)
-    Right.top.append(right_top)
-    right_top = np.mean(Right.top)
-    Right.lastx_int = rightx_int
-    Right.last_top = right_top
+    Right_Lane.x_int.append(rightx_int)
+    rightx_int = np.mean(Right_Lane.x_int)
+    Right_Lane.top.append(right_top)
+    right_top = np.mean(Right_Lane.top)
+    Right_Lane.lastx_int = rightx_int
+    Right_Lane.last_top = right_top
     rightx = np.append(rightx, rightx_int)
     righty = np.append(righty, 720)
     rightx = np.append(rightx, right_top)
     righty = np.append(righty, 0)
 
     # Sort right lane pixels
-    rightx, righty = Right.sort_vals(rightx, righty)
-    Right.X = rightx
-    Right.Y = righty
+    rightx, righty = Right_Lane.sort_vals(rightx, righty)
+    Right_Lane.X = rightx
+    Right_Lane.Y = righty
 
     # Recalculate polynomial with intercepts and average across n frames
     right_fit = np.polyfit(righty, rightx, 2)
-    Right.fit0.append(right_fit[0])
-    Right.fit1.append(right_fit[1])
-    Right.fit2.append(right_fit[2])
-    right_fit = [np.mean(Right.fit0), np.mean(Right.fit1), np.mean(Right.fit2)]
+    Right_Lane.fit0.append(right_fit[0])
+    Right_Lane.fit1.append(right_fit[1])
+    Right_Lane.fit2.append(right_fit[2])
+    right_fit = [np.mean(Right_Lane.fit0), np.mean(Right_Lane.fit1), np.mean(Right_Lane.fit2)]
 
     # Fit polynomial to detected pixels
     right_fitx = right_fit[0]*righty**2 + right_fit[1]*righty + right_fit[2]
-    Right.fitx = right_fitx
+    Right_Lane.fitx = right_fitx
 
     # Compute radius of curvature for each lane in meters
-    left_curverad = Left.radius_of_curvature(leftx, lefty)
-    right_curverad = Right.radius_of_curvature(rightx, righty)
+    left_curverad = Left_Lane.radius_of_curvature(leftx, lefty)
+    right_curverad = Right_Lane.radius_of_curvature(rightx, righty)
 
     # Only print the radius of curvature every 3 frames for improved readability
-    if Left.count % 3 == 0:
-        Left.radius = left_curverad
-        Right.radius = right_curverad
+    if Left_Lane.count % 3 == 0:
+        Left_Lane.radius = left_curverad
+        Right_Lane.radius = right_curverad
 
     # Calculate the vehicle position relative to the center of the lane
     position = (rightx_int+leftx_int)/2
@@ -247,8 +256,8 @@ def process_vid(image):
 
     warp_zero = np.zeros_like(combined_binary).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-    pts_left = np.array([np.flipud(np.transpose(np.vstack([Left.fitx, Left.Y])))])
-    pts_right = np.array([np.transpose(np.vstack([right_fitx, Right.Y]))])
+    pts_left = np.array([np.flipud(np.transpose(np.vstack([Left_Lane.fitx, Left_Lane.Y])))])
+    pts_right = np.array([np.transpose(np.vstack([right_fitx, Right_Lane.Y]))])
     pts = np.hstack((pts_left, pts_right))
     cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
     cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
@@ -263,14 +272,14 @@ def process_vid(image):
         cv2.putText(result, 'Vehicle is {:.2f}m right of center'.format(distance_from_center), (100,80),
                  fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 2)
     # Print radius of curvature on video
-    cv2.putText(result, 'Radius of Curvature {}(m)'.format(int((Left.radius+Right.radius)/2)), (120,140),
+    cv2.putText(result, 'Radius of Curvature {}(m)'.format(int((Left_Lane.radius+Right_Lane.radius)/2)), (120,140),
              fontFace = 16, fontScale = 2, color=(255,255,255), thickness = 2)
-    Left.count += 1
+    Left_Lane.count += 1
     return result
 
 
-Left = Line()
-Right = Line()
+Left_Lane = Line()
+Right_Lane = Line()
 video_output = 'result.mp4'
 video_complete = 'complete.mp4'
 clip1 = VideoFileClip("project_video.mp4").subclip(0,2)

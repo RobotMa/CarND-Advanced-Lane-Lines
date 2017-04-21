@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 # Assuming you have created a warped binary image called "binary_warped"
 # Take a histogram of the bottom half of the image
 histogram = np.sum(binary_warped[int(binary_warped.shape[0]/2):,:], axis=0)
