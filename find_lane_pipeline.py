@@ -309,9 +309,9 @@ if __name__ == "__main__":
     clip1 = VideoFileClip("project_video.mp4").subclip(0,2)
     white_clip = clip1.fl_image(pipeline)
     white_clip.write_videofile(video_output, audio=False)
-    '''
+
     video_complete = 'complete.mp4'
     clip = VideoFileClip("project_video.mp4")
     white_clip = clip.fl_image(pipeline)
-    whiote_clip.write_videofile(video_complete, audio=False)
-    '''
+    white_clip.write_videofile(video_complete, audio=False)
+

@@ -50,7 +50,7 @@ for idx, fname in enumerate(cal_images):
     img = cv2.imread(fname)
     dst = cv2.undistort(img, mtx, dist, None, mtx)
 
-    write_name = 'camera_cal/undistorted_calibration' + str(idx) + '.jpg'
+    write_name = 'output_images/undistorted_calibration' + str(idx) + '.jpg'
     cv2.imwrite(write_name,dst)
 
 # Test undistortion on images
