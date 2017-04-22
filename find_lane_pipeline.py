@@ -186,7 +186,8 @@ class Line:
         fit_cr = np.polyfit(y_vec*ym_per_pix, x_vec*xm_per_pix, 2)
 
         # Calculate the new radii of curvature
-        curverad = ((1 + (2*fit_cr[0]*np.max(y_vec) + fit_cr[1])**2)**1.5) \
+        y_eval = np.max(y_vec)/2
+        curverad = ((1 + (2*fit_cr[0]*y_eval + fit_cr[1])**2)**1.5) \
                                      /np.absolute(2*fit_cr[0])
         return curverad
 
@@ -347,21 +348,20 @@ if __name__ == "__main__":
         img_save.save(write_name)
 
     elif opt == 'video':
-        '''
+
         # Augment a subclip of the video for early stage debugging
         video_output = 'result.mp4'
         clip1 = VideoFileClip("project_video.mp4").subclip(0,2)
         white_clip = clip1.fl_image(pipeline)
         white_clip.write_videofile(video_output, audio=False)
-        '''
 
+        '''
         # Augment the project video
         video_complete = 'complete.mp4'
         clip = VideoFileClip("project_video.mp4")
         white_clip = clip.fl_image(pipeline)
         white_clip.write_videofile(video_complete, audio=False)
 
-        '''
         # Augment the challenge video
         video_challenge = 'challenge_video_augmented.mp4'
         clip2 = VideoFileClip("challenge_video.mp4")
