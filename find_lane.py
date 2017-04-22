@@ -102,12 +102,49 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
     dir_binary[(dir_grad >= thresh[0]) & (dir_grad <= thresh[1])] = 1
     return dir_binary
 
-def hls_select(img, thresh=(0,255)):
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    s_channel = hls[:,:,2]
-    binary_hls = np.zeros_like(s_channel)
-    binary_hls[(s_channel > thresh[0]) & (s_channel <= thresh[1])] = 1
-    return binary_hls
+def color_space_select(img, thresh_hls=(0,255)):
+
+    ## Detect yellow line
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    v_channel = img_hsv[:,:,2]
+    # hsv_y = np.zeros_like(v_channel)
+    # hsv_y[(v_channel > 200) & (v_channel < 225)] = 1
+    hsv_y = cv2.inRange(img_hsv, (20, 0, 100), (100, 255, 255))
+
+    # RGB Yellow
+    # r_channel = img[:,:,1]
+    # rgb_y = np.zeros_like(r_channel)
+    # rgb_y[(r_channel >  50) & (r_channel < 200)] = 1
+
+    ## Detect white line
+    sensitivity_1 = 50
+    hsv_w = cv2.inRange(img_hsv, (0, 0, 255-sensitivity_1),(255, 20, 255))
+
+    # HLS White
+    sensitivity_2 = 60
+    img_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    s_channel = img_hls[:,:,2]
+    hls_w = np.zeros_like(s_channel)
+    hls_w[(s_channel > thresh_hls[0]) & (s_channel <= thresh_hls[1])] = 1
+
+    rgb_w = cv2.inRange(img, (200,200,200), (255,255,255))
+
+    binary_output = hsv_y | hsv_w | hls_w | rgb_w
+    plot_colorspace_images(img, hsv_y, hsv_w, hls_w, rgb_w)
+    return binary_output
+
+def plot_colorspace_images(img, hsv_y, hsv_w, hls_w, rgb_w):
+    # Plot the result
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 9))
+    ax1.imshow(hsv_y)
+    ax1.set_title('Yellow Lane in HSV', fontsize=30)
+    ax2.imshow(hsv_w)
+    ax2.set_title('White Lane in HSV', fontsize=30)
+    ax3.imshow(hls_w)
+    ax3.set_title('White Lane in HLS', fontsize=30)
+    ax4.imshow(rgb_w)
+    ax4.set_title('White Lane in RGB', fontsize=30)
+    savefig('output_images/colorspace_image.png')
 
 def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined):
     # Plot the result
@@ -124,7 +161,7 @@ def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined)
     ax5.set_title('Original Image', fontsize=30)
     ax6.imshow(combined, cmap='gray')
     ax6.set_title('Combined Thresholded Image', fontsize=30)
-    savefig('thresholded_image.png')
+    savefig('output_images/thresholded_image.png')
 
 def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255), \
         gy_thresh=(0,255), mag_thresh=(0,255), dir_thresh=(0, 5), hls_thresh=(0, 255),  plot_opt=False):
@@ -141,9 +178,10 @@ def binary_lane(img, vertices, sobel_ksize=3, gaussian_ksize=5, gx_thresh=(0,255
     combined = np.zeros_like(dir_binary)
     combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) ] = 1
 
-    s_channel = hls_select(image, thresh=hls_thresh)
+    color_space_channel = color_space_select(image, thresh_hls=hls_thresh)
     binary_out = np.zeros_like(combined)
-    binary_out[(s_channel > 0) | (combined > 0)] = 1
+    binary_out[(color_space_channel > 0) | (combined > 0)] = 1
+    # binary_out[(color_space_channel > 0) ] = 1
 
     region_combined = region_of_interest(binary_out, vertices)
 
