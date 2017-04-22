@@ -5,6 +5,9 @@ import cv2
 import glob
 from find_lane import *
 
+# Store the polygon points
+polygon_points_old = None
+
 class Line:
     def __init__(self):
         # Was the line found in the previous frame?
@@ -202,15 +205,34 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
     pts_right = np.array([np.transpose(np.vstack([Right_Lane.fitx, Right_Lane.y_vec]))])
     pts = np.hstack((pts_left, pts_right))
 
+    global polygon_points_old
+
+    # convert (1,n,2) array to (n, 2)
+    polygon_points = np.int_([pts])[0,:,:]
+
+    if (polygon_points_old == None):
+        polygon_points_old = polygon_points
+
+    a = polygon_points_old
+    b = polygon_points
+
+    diff = cv2.matchShapes(a, b, 1, 0.0)
+
+    if (diff < 0.045):
+        polygon_points_old = polygon_points
+
     # Draw the lane onto the warped blank image
-    cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
+    # cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
+    cv2.polylines(color_warp, polygon_points_old, isClosed=False, color=(0,0,255), thickness = 40)
 
-    cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
 
+    cv2.fillPoly(color_warp, polygon_points_old, (34,255,34))
+
+    '''
     img_save = Image.fromarray(color_warp)
     write_name = 'output_images/poly_test2.jpg'
     img_save.save(write_name)
-
+    '''
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     imshape = combined_binary.shape
