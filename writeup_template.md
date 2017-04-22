@@ -21,13 +21,14 @@ The goals / steps of this project are the following:
 [image0]: ./camera_cal/calibration1.jpg "Distorted"
 [image1]: ./output_images/undistorted_calibration1.jpg "Undistorted"
 [image2]: ./test_images/test1.jpg "Raw Road Image"
-[image3]: ./output_images/thresholded_test1.png "Thresholded Binary Image"
-[image4]: ./test_images/straight_lines1.jpg "Unwarped Straight Line"
-[image5]: ./output_images/warped_straight_lines1.jpg "Warped Straight Line"
-[image6]: ./output_images/color_fit_lines.jpg "Fit Visual"
-[image7]: ./output_images/color_fit_lines.jpg "Fit Visual"
-[image8]: ./test_images/test3.jpg "Output"
-[image9]: ./output_images/aug_test3.jpg "Output"
+[image3]: ./output_images/undistorted_test1.jpg "Undistorted Road Image"
+[image4]: ./output_images/thresholded_test1.png "Thresholded Binary Image"
+[image5]: ./test_images/straight_lines1.jpg "Unwarped Straight Line"
+[image6]: ./output_images/warped_straight_lines1.jpg "Warped Straight Line"
+[image7]: ./test_images/test2.jpg "Unfit Visual"
+[image8]: ./output_images/poly_test2.jpg "Fit Visual"
+[image9]: ./test_images/test3.jpg "Output"
+[image10]: ./output_images/aug_test3.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -57,14 +58,18 @@ Distorted                  |  Undistorted
 
 #### 1. Provide an example of a distortion-corrected image.
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+
+Distorted                  |  Undistorted
+:-------------------------:|:-------------------------:
+![alt_text][image2]        |  ![alt_text][image3]
+
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 36 through 110 and lines 129 through 156 in `find_lane.py`).  Four different kinds of gradient related thresholds are applied onto the grayscaled image, and then the S channel of HLS color space of the image is extracted out. The thresholded grayscaled image and the S channel are then fused to obtain the final result. The tuning of various threshold parameters is the key to the
 success of identifying the lanes with less noise. Here's an example of my output for this step.  
 
 Unthresholded              | Thresholded 
 :-------------------------:|:-------------------------:
-![alt_text][image2]        |  ![alt_text][image3]
+![alt_text][image2]        |  ![alt_text][image4]
 
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
@@ -93,17 +98,20 @@ I verified that my perspective transform was working as expected by drawing the 
 
 Unwarped                   | Warped 
 :-------------------------:|:-------------------------:
-![alt_text][image4]        |  ![alt_text][image5]
+![alt_text][image5]        |  ![alt_text][image6]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+After obtained the grayscaled images of the lanes, a histogram of the image is computed describing the distribution of the white pixels along the x-axis. This was performed not for the entire image, but for each sliding window along the y axis. The peak positions can be obtained from the series of histograms and the adjacent white pixels were picked out to generate the final "pixelized" lanes. A 2nd order polynomial fitting was exerted on the lanes to get the curve representation of the left
+and right lane. The fitted lane lines with a 2nd order polynomial kinda like this:
 
-![alt text][image5]
+Raw                        | Fitted 
+:-------------------------:|:-------------------------:
+![alt_text][image7]        |  ![alt_text][image8]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines 282 through 284 (shift with respect to center) and lines 177 through 188 (curvature) in my code in `find_lane_pipeline.py`
+I did this in lines 282 through 284 (shift with respect to center) and lines 177 through 188 (curvature) in my code in `find_lane_pipeline.py`. Basically, after obtaining the two polynomial fitted lines for the left and right lanes in the warped space, the lines are scaled to their dimensions in the physical world and the radii are calculated for each of the line using the curvature formula. Then the final radius is computed as the average of the two radii. 
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -111,7 +119,7 @@ I implemented this step in lines 219 through 301 in my code in `find_lane_pipeli
 
 Raw                        | Augmented
 :-------------------------:|:-------------------------:
-![alt_text][image8]        |  ![alt_text][image9]
+![alt_text][image9]        |  ![alt_text][image10]
 
 ---
 
@@ -119,7 +127,8 @@ Raw                        | Augmented
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](https://www.youtube.com/watch?v=ueWy_6RVo0E). 
+Here's a [link to my project video result](https://www.youtube.com/watch?v=ueWy_6RVo0E). 
+
 ---
 
 ### Discussion
@@ -128,5 +137,9 @@ Here's a [link to my video result](https://www.youtube.com/watch?v=ueWy_6RVo0E).
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
-The pipeline works pretty well in general, however, there is a wobble at the end of the video. 
+##### 1. The pipeline works pretty well in general, however, there is a wobble at the end of the video. This is due to imprecise identification of the lanes when there is a shadow. A fix can be introducing one of the other two channels in HLS color space such that the yellow lane and white lane are caught separately in different color space and then merged together to get a more robust result.
 
+##### 2. Performing an average on the fitted polynomial is very important. This helps smoothen the detected drivable space in the lane. However, this is a double edged sword since calculating the average can also delay the time of correction from a failure/imprecise detection. 
+
+
+##### 3. Implementing a long pipeline is very error prone and it helped to implement and check the results following the workflow described in this report. Debugging tools like ipdb was also used to fix small typos in the code.

@@ -207,6 +207,11 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
 
     cv2.fillPoly(color_warp, np.int_(pts), (34,255,34))
 
+    img_save = Image.fromarray(color_warp)
+    write_name = 'output_images/poly_test2.jpg'
+    img_save.save(write_name)
+
+
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     imshape = combined_binary.shape
     newwarp = cv2.warpPerspective(color_warp, Minv, (imshape[1], imshape[0]))
@@ -309,10 +314,10 @@ if __name__ == "__main__":
 
     if opt == 'image':
 
-        img = cv2.imread('test_images/test3.jpg')
+        img = cv2.imread('test_images/test2.jpg')
         img_aug = pipeline(img)
         img_save = Image.fromarray(img_aug)
-        write_name = 'output_images/aug_test3.jpg'
+        write_name = 'output_images/aug_test2.jpg'
         img_save.save(write_name)
 
     elif opt == 'video':
