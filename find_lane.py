@@ -104,46 +104,54 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
 
 def color_space_select(img, thresh_hls=(0,255)):
 
-    ## Detect yellow line
+    # HSV Yellow
     img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-    v_channel = img_hsv[:,:,2]
-    # hsv_y = np.zeros_like(v_channel)
-    # hsv_y[(v_channel > 200) & (v_channel < 225)] = 1
     hsv_y = cv2.inRange(img_hsv, (20, 0, 100), (100, 255, 255))
 
-    # RGB Yellow
-    # r_channel = img[:,:,1]
-    # rgb_y = np.zeros_like(r_channel)
-    # rgb_y[(r_channel >  50) & (r_channel < 200)] = 1
-
-    ## Detect white line
+    # HSV White
     sensitivity_1 = 50
-    hsv_w = cv2.inRange(img_hsv, (0, 0, 255-sensitivity_1),(255, 20, 255))
+    hsv_w = cv2.inRange(img_hsv, (0, 0, 255-sensitivity_1),(255, 30, 255))
 
-    # HLS White
+    # HLS Yellow
     sensitivity_2 = 60
     img_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     s_channel = img_hls[:,:,2]
-    hls_w = np.zeros_like(s_channel)
-    hls_w[(s_channel > thresh_hls[0]) & (s_channel <= thresh_hls[1])] = 1
+    hls_y = np.zeros_like(s_channel)
+    hls_y[(s_channel > thresh_hls[0]) & (s_channel <= thresh_hls[1])] = 1
 
+    # RGB White
     rgb_w = cv2.inRange(img, (200,200,200), (255,255,255))
+    '''
+        LUV for yellow and HLS for white are tested but not used
+    '''
+    # LUV Yellow
+    img_luv = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+    luv_y = cv2.inRange(img_luv, (100,0,0), (200,80,255))
 
-    binary_output = hsv_y | hsv_w | hls_w | rgb_w
-    plot_colorspace_images(img, hsv_y, hsv_w, hls_w, rgb_w)
+    # HLS White/Yellow
+    l_channel = img_hls[:,:,1]
+    hls_w = np.zeros_like(l_channel)
+    hls_w[(l_channel > 150) & (l_channel <= 180)] = 1
+
+    binary_output = hsv_y | hsv_w | hls_y | rgb_w | luv_y
+    # plot_colorspace_images(img, hsv_y, hsv_w, hls_y, rgb_w, luv_y, hls_w)
     return binary_output
 
-def plot_colorspace_images(img, hsv_y, hsv_w, hls_w, rgb_w):
+def plot_colorspace_images(img, hsv_y, hsv_w, hls_w, rgb_w, luv_y, lab_y):
     # Plot the result
-    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 9))
+    f, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=(20, 9))
     ax1.imshow(hsv_y)
     ax1.set_title('Yellow Lane in HSV', fontsize=30)
     ax2.imshow(hsv_w)
     ax2.set_title('White Lane in HSV', fontsize=30)
     ax3.imshow(hls_w)
-    ax3.set_title('White Lane in HLS', fontsize=30)
+    ax3.set_title('Yellow Lane in HLS', fontsize=30)
     ax4.imshow(rgb_w)
     ax4.set_title('White Lane in RGB', fontsize=30)
+    ax5.imshow(luv_y)
+    ax5.set_title('Yellow Lane in LUV', fontsize=30)
+    ax6.imshow(lab_y)
+    ax6.set_title('White Lane in LAB', fontsize=30)
     savefig('output_images/colorspace_image.png')
 
 def plot_thresholded_images(img, gradx, grady, mag_binary, dir_binary, combined):
@@ -277,8 +285,8 @@ if __name__ == "__main__":
 
     for idx, fname in enumerate(test_img):
         image = cv2.imread(fname)
-        binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
-                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255), plot_opt=True)
+        binary_output = binary_lane(image, vertices, ksize, kernel_size, gx_thresh=(80, 255), \
+                                gy_thresh=(80, 255), mag_thresh=(80, 255), dir_thresh=(0.7, 1.10), hls_thresh=(180, 180), plot_opt=True)
 
         warped, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
 

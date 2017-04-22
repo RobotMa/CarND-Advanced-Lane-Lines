@@ -223,7 +223,7 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
 
     # Use the new polygon points if the difference is small
     # This helps filter the new polygon points that are irregular
-    if (diff < 0.045):
+    if (diff < 0.055):
         polygon_points_old = polygon_points
 
     # Draw the lane onto the warped blank image
@@ -271,8 +271,8 @@ def pipeline(image):
     undistort = cv2.undistort(image, dist_pickle['mtx'], dist_pickle['dist'], None, dist_pickle['mtx'])
 
     # Compute the binary image using various thresholding techniques
-    binary_output = binary_lane(undistort, vertices, ksize, kernel_size, gx_thresh=(50, 255), \
-                                gy_thresh=(50, 255), mag_thresh=(60, 255), dir_thresh=(0.7, 1.10), hls_thresh=(160, 255))
+    binary_output = binary_lane(undistort, vertices, ksize, kernel_size, gx_thresh=(80, 255), \
+                                gy_thresh=(80, 255), mag_thresh=(80, 255), dir_thresh=(0.7, 1.10), hls_thresh=(180, 190))
 
     # Perform perspective transform
     combined_binary, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
@@ -347,11 +347,21 @@ if __name__ == "__main__":
         write_name = 'output_images/aug_test3.jpg'
         img_save.save(write_name)
 
+    elif opt == 'screenshot':
+
+        clip = VideoFileClip("project_video.mp4")
+        clip.save_frame("screen_shot.png", t=42)
+        img = cv2.imread('screen_shot.png')
+        img_aug = pipeline(img)
+        img_save = Image.fromarray(img_aug)
+        write_name = 'output_images/aug_screen_shot.jpg'
+        img_save.save(write_name)
+
     elif opt == 'video':
 
         # Augment a subclip of the video for early stage debugging
         video_output = 'result.mp4'
-        clip1 = VideoFileClip("project_video.mp4").subclip(38,43)
+        clip1 = VideoFileClip("project_video.mp4").subclip(38,40)
         white_clip = clip1.fl_image(pipeline)
         white_clip.write_videofile(video_output, audio=False)
 
