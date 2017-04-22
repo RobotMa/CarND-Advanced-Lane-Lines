@@ -64,7 +64,7 @@ Distorted                  |  Undistorted
 ![alt_text][image2]        |  ![alt_text][image3]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 36 through 110 and lines 129 through 156 in `find_lane.py`).  Four different kinds of gradient related thresholds are applied onto the grayscaled image, and then the S channel of HLS color space of the image is extracted out. The thresholded grayscaled image and the S channel are then fused to obtain the final result. The tuning of various threshold parameters is the key to the
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 36 through 110 and lines 129 through 156 in `find_lane.py`).  Four different kinds of gradient related thresholds are applied onto the grayscaled image, and then the S channel of HLS color space of the image is extracted out. Initially, the thresholded grayscaled image and the S channel are then fused to obtain the final result. However, further experiment shows that the V channel of HSV is better able to detect the yellow lane than the S channel of HLS especially when there is shadow. Detection of white lane is performed through the combination of the S channel of HSV and the R channel of RGB. The tuning of various threshold parameters is the key to the
 success of identifying the lanes with less noise. Here's an example of my output for this step.  
 
 Unthresholded              | Thresholded 
@@ -127,7 +127,7 @@ Raw                        | Augmented
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my project video result](https://youtu.be/UmeZT9RTjqE). 
+Here's a [link to my project video result](https://youtu.be/JWJn0T_zX1o). 
 
 ---
 
@@ -137,7 +137,7 @@ Here's a [link to my project video result](https://youtu.be/UmeZT9RTjqE).
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
-##### 1. The pipeline works pretty well in general, however, there is a wobble at the end of the video. This is due to imprecise identification of the lanes when there is a shadow. A fix can be introducing one of the other two channels in HLS color space such that the yellow lane and white lane are caught separately in different color space and then merged together to get a more robust result.
+##### 1. The pipeline works pretty well in general. This is achieved through a lot of experiments with choosing the right thresholds for various color spaces, and it is observed that the right color space can be more important than applying the gradients especially when the environment is changing. 
 
 ##### 2. Performing an average on the fitted polynomial is very important. This helps smoothen the detected drivable space in the lane. However, this is a double edged sword since calculating the average can also delay the time of correction from a failure/imprecise detection. 
 

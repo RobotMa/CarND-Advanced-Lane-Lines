@@ -223,21 +223,19 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
 
     # Use the new polygon points if the difference is small
     # This helps filter the new polygon points that are irregular
-    if (diff < 0.055):
+    if (diff < 1.00):
         polygon_points_old = polygon_points
 
     # Draw the lane onto the warped blank image
     # cv2.polylines(color_warp, np.int_([pts]), isClosed=False, color=(0,0,255), thickness = 40)
     cv2.polylines(color_warp, polygon_points_old, isClosed=False, color=(0,0,255), thickness = 40)
-
-
     cv2.fillPoly(color_warp, polygon_points_old, (34,255,34))
 
-    '''
+
     img_save = Image.fromarray(color_warp)
     write_name = 'output_images/poly_test2.jpg'
     img_save.save(write_name)
-    '''
+
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     imshape = combined_binary.shape
@@ -272,7 +270,7 @@ def pipeline(image):
 
     # Compute the binary image using various thresholding techniques
     binary_output = binary_lane(undistort, vertices, ksize, kernel_size, gx_thresh=(80, 255), \
-                                gy_thresh=(80, 255), mag_thresh=(80, 255), dir_thresh=(0.7, 1.10), hls_thresh=(180, 190))
+                                gy_thresh=(80, 255), mag_thresh=(80, 255), dir_thresh=(0.7, 1.10), hls_thresh=(180, 180))
 
     # Perform perspective transform
     combined_binary, M, Minv = perspective_transform(binary_output, area_of_interest, dist_pickle['mtx'], dist_pickle['dist'])
@@ -337,14 +335,14 @@ if __name__ == "__main__":
     Left_Lane = Line()
     Right_Lane = Line()
 
-    opt = 'video'
+    opt = 'image'
 
     if opt == 'image':
 
-        img = cv2.imread('test_images/test3.jpg')
+        img = cv2.imread('test_images/test2.jpg')
         img_aug = pipeline(img)
         img_save = Image.fromarray(img_aug)
-        write_name = 'output_images/aug_test3.jpg'
+        write_name = 'output_images/aug_test2.jpg'
         img_save.save(write_name)
 
     elif opt == 'screenshot':
@@ -357,7 +355,7 @@ if __name__ == "__main__":
         write_name = 'output_images/aug_screen_shot.jpg'
         img_save.save(write_name)
 
-    elif opt == 'video':
+    elif opt == 'clip':
 
         # Augment a subclip of the video for early stage debugging
         video_output = 'result.mp4'
@@ -365,18 +363,18 @@ if __name__ == "__main__":
         white_clip = clip1.fl_image(pipeline)
         white_clip.write_videofile(video_output, audio=False)
 
-        '''
+    elif opt == 'video':
+
         # Augment the project video
         video_complete = 'complete.mp4'
         clip = VideoFileClip("project_video.mp4")
         white_clip = clip.fl_image(pipeline)
         white_clip.write_videofile(video_complete, audio=False)
 
-        '''
-        '''
+    elif opt == 'challenge':
+
         # Augment the challenge video
         video_challenge = 'challenge_video_augmented.mp4'
         clip2 = VideoFileClip("challenge_video.mp4")
         white_clip = clip2.fl_image(pipeline)
         white_clip.write_videofile(video_challenge, audio=False)
-        '''
