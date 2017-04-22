@@ -335,7 +335,7 @@ if __name__ == "__main__":
     Left_Lane = Line()
     Right_Lane = Line()
 
-    opt = 'image'
+    opt = 'video'
 
     if opt == 'image':
 
