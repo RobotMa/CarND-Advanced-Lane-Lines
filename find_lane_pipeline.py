@@ -205,6 +205,7 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
     pts_right = np.array([np.transpose(np.vstack([Right_Lane.fitx, Right_Lane.y_vec]))])
     pts = np.hstack((pts_left, pts_right))
 
+    ## Polygon Difference Based Filter ##
     global polygon_points_old
 
     # convert (1,n,2) array to (n, 2)
@@ -216,8 +217,11 @@ def project_back(combined_binary, undistort, Minv, Left_Lane, Right_Lane):
     a = polygon_points_old
     b = polygon_points
 
+    # Compute the difference between the current polygon and previous polygon
     diff = cv2.matchShapes(a, b, 1, 0.0)
 
+    # Use the new polygon points if the difference is small
+    # This helps filter the new polygon points that are irregular
     if (diff < 0.045):
         polygon_points_old = polygon_points
 
